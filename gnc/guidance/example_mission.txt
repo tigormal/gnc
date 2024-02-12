@@ -1,0 +1,58 @@
+# Plan route towards point "Flag A" in layer "Main", instruction terminates when in 40 meters away from the target, visual hint for targeting is object recognition tag "wheels" inside "tank_bot" tag, commit route planning only within a polygon "Field" in layer "Main"
+TARGET "Main / Flag A", DISTANCE 40, VISUAL tank_bot.wheels, AREA "Main / Field"
+TARGET "Main/Flag A" +Z25.0, VISUAL tank_bot, AREA "Main/Field", APPROACH
+
+# Execute "Unload" command on device/gadget
+COMMAND Unload
+
+# Plan route towards "Checkpoint" point in layer "Main", attempt approach to the point (decrease speed)
+TARGET "Main / Checkpoint ", APPROACH
+
+# Set "Extraction Path 1" line from "Routes" layer as current route, visual hint is object recognition tag of "human", keep 2 m between self and "human" object, reroute in case of obstacles
+FOLLOW "Routes/Extraction Path 1", VISUAL human, DISTANCE 2
+
+# Execute "Idle" command on device/gadget
+COMMAND Idle
+
+# Stop mission
+ABORT
+
+
+
+## --------------------
+## Advanced stuff
+
+# Set units for shifts as meter, coordinates as n-vector
+UNITS "m"  # <- mil, km, nm, etc.
+COORDS "n-vector"  # <- lla, direct
+
+# Plan route to coordinates 0.0 10.0 (given in WKT format)
+TARGET "POINT (0.0 10.0)"
+
+# Start moving in helix building map, maximum radius 10 m from start
+DISCOVERY, DISTANCE 10
+
+# Start moving in helix building map, in given area
+DISCOVERY, AREA "Main / Woods":
+	ON VISUAL human:
+		COMMAND Flashlight
+	ON VISUAL tank_bot:
+		TARGET VISUAL
+		COMMAND Unload
+	ON TELEMETRY (battery <= 20):
+		EXIT  # Exit discovery
+	ON TELEMETRY (damage == "HIGH"):
+		EXIT
+
+REPEAT TIMES 5:
+	TARGET "Main / Home" + Z25, APPROACH
+	COMMAND Load
+	TARGET "Main / Warehouse" + Z10.0 - X0.2, APPROACH
+	COMMAND Unload
+	ON VISUAL human:
+		ABORT
+	ON TELEMETRY (battery <= 20):
+		TARGET "Main / Home" + Z25, APPROACH
+
+REPEAT UNTIL TELEMETRY (battery <= 5):
+	FOLLOW "Routes / Circle 1"

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnc"
+version = "0.1.3"
+authors = [{ name = "Igor Maliuk", email = "tigormal@gmail.com" }]
+description = "Guidance, navigation and control"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    "shapely",
+    "dataclass_wizard",
+    "addict",
+    "numpy",
+    "PyDispatcher",
+    "dataclass_wizard",
+    "Pyro5",
+    "daemonocle",
+    "ply",
+    "watchdog",
+    "ahrs@git+https://github.com/Mayitzin/ahrs.git",
+]
+
+# [project.scripts]
+# cdd = "coredevice.cdd:main"
+
+[tool.setuptools]
+packages = ["maps", "gnc"]

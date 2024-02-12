@@ -1,0 +1,180 @@
+layers:
+  Alpha:
+    hidden: false
+    image: ''
+    kind: 0
+    objects:
+    - anchors: null
+      color: 0
+      geometry: POINT (-106 23)
+      heading: null
+      highlight: false
+      icon: Point
+      name: Point
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (80 -51)
+      heading: null
+      highlight: false
+      icon: null
+      name: Object 1
+      showtext: false
+    - anchors: null
+      color: 1
+      geometry: LINESTRING (-307 -404, -100 -160, 147 -482, -286 -535, -286 -535,
+        -317 -530, -317 -530)
+      heading: null
+      highlight: false
+      icon: Table
+      name: Line
+      showtext: false
+    - anchors:
+        0: Point
+        1: Object 1
+        2: Point 1
+      color: 2
+      geometry: LINESTRING (-106 23, 80 -51, 269 -189, 349 -273, 349 -273)
+      heading: null
+      highlight: false
+      icon: Table
+      name: Line 1
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (378 -129)
+      heading: null
+      highlight: false
+      icon: Table
+      name: Point 1
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    - anchors: null
+      color: 0
+      geometry: POINT (0 0)
+      heading: null
+      highlight: false
+      icon: null
+      name: Test
+      showtext: false
+    origin:
+    - 0
+    - 0
+    size:
+    - 100
+    - 100
+  Beta:
+    hidden: false
+    image: labyrinth.tif
+    kind: 0
+    objects: []
+    origin:
+    - 0
+    - 0
+    size:
+    - 10
+    - 10
+name: Test

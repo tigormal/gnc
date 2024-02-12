@@ -1,0 +1,468 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Unused terminals:
+
+    EQUAL
+    EQUALS
+    EXIT
+    GREATER
+    GREATEREQUAL
+    LESSEQUAL
+    LESSTHAN
+    LPAREN
+    MINUS
+    NOTEQUAL
+    PLUS
+    REPEAT
+    RPAREN
+    TELEMETRY
+    TIMES
+    UNTIL
+
+Grammar
+
+Rule 0     S' -> stmt
+Rule 1     stmt -> TARGET STRING COMMA args
+Rule 2     stmt -> TARGET STRING
+Rule 3     stmt -> TARGET STRING shift
+Rule 4     stmt -> TARGET STRING shift COMMA args
+Rule 5     stmt -> FOLLOW STRING COMMA args
+Rule 6     stmt -> FOLLOW STRING
+Rule 7     shift -> DIR
+Rule 8     shift -> DIR DIR
+Rule 9     shift -> DIR DIR DIR
+Rule 10    args -> args COMMA expr
+Rule 11    args -> expr
+Rule 12    expr -> DISTANCE INT
+Rule 13    expr -> DISTANCE REAL
+Rule 14    expr -> AREA STRING
+Rule 15    expr -> VISUAL ID
+Rule 16    stmt -> COMMAND ID
+Rule 17    stmt -> ABORT
+Rule 18    expr -> APPROACH
+Rule 19    expr -> SPEED INT
+Rule 20    expr -> SPEED REAL
+Rule 21    stmt -> DISCOVERY COMMA expr
+
+Terminals, with rules where they appear
+
+ABORT                : 17
+APPROACH             : 18
+AREA                 : 14
+COMMA                : 1 4 5 10 21
+COMMAND              : 16
+DIR                  : 7 8 8 9 9 9
+DISCOVERY            : 21
+DISTANCE             : 12 13
+EQUAL                : 
+EQUALS               : 
+EXIT                 : 
+FOLLOW               : 5 6
+GREATER              : 
+GREATEREQUAL         : 
+ID                   : 15 16
+INT                  : 12 19
+LESSEQUAL            : 
+LESSTHAN             : 
+LPAREN               : 
+MINUS                : 
+NOTEQUAL             : 
+PLUS                 : 
+REAL                 : 13 20
+REPEAT               : 
+RPAREN               : 
+SPEED                : 19 20
+STRING               : 1 2 3 4 5 6 14
+TARGET               : 1 2 3 4
+TELEMETRY            : 
+TIMES                : 
+UNTIL                : 
+VISUAL               : 15
+error                : 
+
+Nonterminals, with rules where they appear
+
+args                 : 1 4 5 10
+expr                 : 10 11 21
+shift                : 3 4
+stmt                 : 0
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . stmt
+    (1) stmt -> . TARGET STRING COMMA args
+    (2) stmt -> . TARGET STRING
+    (3) stmt -> . TARGET STRING shift
+    (4) stmt -> . TARGET STRING shift COMMA args
+    (5) stmt -> . FOLLOW STRING COMMA args
+    (6) stmt -> . FOLLOW STRING
+    (16) stmt -> . COMMAND ID
+    (17) stmt -> . ABORT
+    (21) stmt -> . DISCOVERY COMMA expr
+
+    TARGET          shift and go to state 2
+    FOLLOW          shift and go to state 3
+    COMMAND         shift and go to state 4
+    ABORT           shift and go to state 5
+    DISCOVERY       shift and go to state 6
+
+    stmt                           shift and go to state 1
+
+state 1
+
+    (0) S' -> stmt .
+
+
+
+state 2
+
+    (1) stmt -> TARGET . STRING COMMA args
+    (2) stmt -> TARGET . STRING
+    (3) stmt -> TARGET . STRING shift
+    (4) stmt -> TARGET . STRING shift COMMA args
+
+    STRING          shift and go to state 7
+
+
+state 3
+
+    (5) stmt -> FOLLOW . STRING COMMA args
+    (6) stmt -> FOLLOW . STRING
+
+    STRING          shift and go to state 8
+
+
+state 4
+
+    (16) stmt -> COMMAND . ID
+
+    ID              shift and go to state 9
+
+
+state 5
+
+    (17) stmt -> ABORT .
+
+    $end            reduce using rule 17 (stmt -> ABORT .)
+
+
+state 6
+
+    (21) stmt -> DISCOVERY . COMMA expr
+
+    COMMA           shift and go to state 10
+
+
+state 7
+
+    (1) stmt -> TARGET STRING . COMMA args
+    (2) stmt -> TARGET STRING .
+    (3) stmt -> TARGET STRING . shift
+    (4) stmt -> TARGET STRING . shift COMMA args
+    (7) shift -> . DIR
+    (8) shift -> . DIR DIR
+    (9) shift -> . DIR DIR DIR
+
+    COMMA           shift and go to state 11
+    $end            reduce using rule 2 (stmt -> TARGET STRING .)
+    DIR             shift and go to state 13
+
+    shift                          shift and go to state 12
+
+state 8
+
+    (5) stmt -> FOLLOW STRING . COMMA args
+    (6) stmt -> FOLLOW STRING .
+
+    COMMA           shift and go to state 14
+    $end            reduce using rule 6 (stmt -> FOLLOW STRING .)
+
+
+state 9
+
+    (16) stmt -> COMMAND ID .
+
+    $end            reduce using rule 16 (stmt -> COMMAND ID .)
+
+
+state 10
+
+    (21) stmt -> DISCOVERY COMMA . expr
+    (12) expr -> . DISTANCE INT
+    (13) expr -> . DISTANCE REAL
+    (14) expr -> . AREA STRING
+    (15) expr -> . VISUAL ID
+    (18) expr -> . APPROACH
+    (19) expr -> . SPEED INT
+    (20) expr -> . SPEED REAL
+
+    DISTANCE        shift and go to state 16
+    AREA            shift and go to state 17
+    VISUAL          shift and go to state 18
+    APPROACH        shift and go to state 19
+    SPEED           shift and go to state 20
+
+    expr                           shift and go to state 15
+
+state 11
+
+    (1) stmt -> TARGET STRING COMMA . args
+    (10) args -> . args COMMA expr
+    (11) args -> . expr
+    (12) expr -> . DISTANCE INT
+    (13) expr -> . DISTANCE REAL
+    (14) expr -> . AREA STRING
+    (15) expr -> . VISUAL ID
+    (18) expr -> . APPROACH
+    (19) expr -> . SPEED INT
+    (20) expr -> . SPEED REAL
+
+    DISTANCE        shift and go to state 16
+    AREA            shift and go to state 17
+    VISUAL          shift and go to state 18
+    APPROACH        shift and go to state 19
+    SPEED           shift and go to state 20
+
+    args                           shift and go to state 21
+    expr                           shift and go to state 22
+
+state 12
+
+    (3) stmt -> TARGET STRING shift .
+    (4) stmt -> TARGET STRING shift . COMMA args
+
+    $end            reduce using rule 3 (stmt -> TARGET STRING shift .)
+    COMMA           shift and go to state 23
+
+
+state 13
+
+    (7) shift -> DIR .
+    (8) shift -> DIR . DIR
+    (9) shift -> DIR . DIR DIR
+
+    COMMA           reduce using rule 7 (shift -> DIR .)
+    $end            reduce using rule 7 (shift -> DIR .)
+    DIR             shift and go to state 24
+
+
+state 14
+
+    (5) stmt -> FOLLOW STRING COMMA . args
+    (10) args -> . args COMMA expr
+    (11) args -> . expr
+    (12) expr -> . DISTANCE INT
+    (13) expr -> . DISTANCE REAL
+    (14) expr -> . AREA STRING
+    (15) expr -> . VISUAL ID
+    (18) expr -> . APPROACH
+    (19) expr -> . SPEED INT
+    (20) expr -> . SPEED REAL
+
+    DISTANCE        shift and go to state 16
+    AREA            shift and go to state 17
+    VISUAL          shift and go to state 18
+    APPROACH        shift and go to state 19
+    SPEED           shift and go to state 20
+
+    args                           shift and go to state 25
+    expr                           shift and go to state 22
+
+state 15
+
+    (21) stmt -> DISCOVERY COMMA expr .
+
+    $end            reduce using rule 21 (stmt -> DISCOVERY COMMA expr .)
+
+
+state 16
+
+    (12) expr -> DISTANCE . INT
+    (13) expr -> DISTANCE . REAL
+
+    INT             shift and go to state 26
+    REAL            shift and go to state 27
+
+
+state 17
+
+    (14) expr -> AREA . STRING
+
+    STRING          shift and go to state 28
+
+
+state 18
+
+    (15) expr -> VISUAL . ID
+
+    ID              shift and go to state 29
+
+
+state 19
+
+    (18) expr -> APPROACH .
+
+    $end            reduce using rule 18 (expr -> APPROACH .)
+    COMMA           reduce using rule 18 (expr -> APPROACH .)
+
+
+state 20
+
+    (19) expr -> SPEED . INT
+    (20) expr -> SPEED . REAL
+
+    INT             shift and go to state 30
+    REAL            shift and go to state 31
+
+
+state 21
+
+    (1) stmt -> TARGET STRING COMMA args .
+    (10) args -> args . COMMA expr
+
+    $end            reduce using rule 1 (stmt -> TARGET STRING COMMA args .)
+    COMMA           shift and go to state 32
+
+
+state 22
+
+    (11) args -> expr .
+
+    COMMA           reduce using rule 11 (args -> expr .)
+    $end            reduce using rule 11 (args -> expr .)
+
+
+state 23
+
+    (4) stmt -> TARGET STRING shift COMMA . args
+    (10) args -> . args COMMA expr
+    (11) args -> . expr
+    (12) expr -> . DISTANCE INT
+    (13) expr -> . DISTANCE REAL
+    (14) expr -> . AREA STRING
+    (15) expr -> . VISUAL ID
+    (18) expr -> . APPROACH
+    (19) expr -> . SPEED INT
+    (20) expr -> . SPEED REAL
+
+    DISTANCE        shift and go to state 16
+    AREA            shift and go to state 17
+    VISUAL          shift and go to state 18
+    APPROACH        shift and go to state 19
+    SPEED           shift and go to state 20
+
+    args                           shift and go to state 33
+    expr                           shift and go to state 22
+
+state 24
+
+    (8) shift -> DIR DIR .
+    (9) shift -> DIR DIR . DIR
+
+    COMMA           reduce using rule 8 (shift -> DIR DIR .)
+    $end            reduce using rule 8 (shift -> DIR DIR .)
+    DIR             shift and go to state 34
+
+
+state 25
+
+    (5) stmt -> FOLLOW STRING COMMA args .
+    (10) args -> args . COMMA expr
+
+    $end            reduce using rule 5 (stmt -> FOLLOW STRING COMMA args .)
+    COMMA           shift and go to state 32
+
+
+state 26
+
+    (12) expr -> DISTANCE INT .
+
+    $end            reduce using rule 12 (expr -> DISTANCE INT .)
+    COMMA           reduce using rule 12 (expr -> DISTANCE INT .)
+
+
+state 27
+
+    (13) expr -> DISTANCE REAL .
+
+    $end            reduce using rule 13 (expr -> DISTANCE REAL .)
+    COMMA           reduce using rule 13 (expr -> DISTANCE REAL .)
+
+
+state 28
+
+    (14) expr -> AREA STRING .
+
+    $end            reduce using rule 14 (expr -> AREA STRING .)
+    COMMA           reduce using rule 14 (expr -> AREA STRING .)
+
+
+state 29
+
+    (15) expr -> VISUAL ID .
+
+    $end            reduce using rule 15 (expr -> VISUAL ID .)
+    COMMA           reduce using rule 15 (expr -> VISUAL ID .)
+
+
+state 30
+
+    (19) expr -> SPEED INT .
+
+    $end            reduce using rule 19 (expr -> SPEED INT .)
+    COMMA           reduce using rule 19 (expr -> SPEED INT .)
+
+
+state 31
+
+    (20) expr -> SPEED REAL .
+
+    $end            reduce using rule 20 (expr -> SPEED REAL .)
+    COMMA           reduce using rule 20 (expr -> SPEED REAL .)
+
+
+state 32
+
+    (10) args -> args COMMA . expr
+    (12) expr -> . DISTANCE INT
+    (13) expr -> . DISTANCE REAL
+    (14) expr -> . AREA STRING
+    (15) expr -> . VISUAL ID
+    (18) expr -> . APPROACH
+    (19) expr -> . SPEED INT
+    (20) expr -> . SPEED REAL
+
+    DISTANCE        shift and go to state 16
+    AREA            shift and go to state 17
+    VISUAL          shift and go to state 18
+    APPROACH        shift and go to state 19
+    SPEED           shift and go to state 20
+
+    expr                           shift and go to state 35
+
+state 33
+
+    (4) stmt -> TARGET STRING shift COMMA args .
+    (10) args -> args . COMMA expr
+
+    $end            reduce using rule 4 (stmt -> TARGET STRING shift COMMA args .)
+    COMMA           shift and go to state 32
+
+
+state 34
+
+    (9) shift -> DIR DIR DIR .
+
+    COMMA           reduce using rule 9 (shift -> DIR DIR DIR .)
+    $end            reduce using rule 9 (shift -> DIR DIR DIR .)
+
+
+state 35
+
+    (10) args -> args COMMA expr .
+
+    COMMA           reduce using rule 10 (args -> args COMMA expr .)
+    $end            reduce using rule 10 (args -> args COMMA expr .)
+
