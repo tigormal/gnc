@@ -24,16 +24,16 @@ from coredevice.gadget import (Gadget,
                                defDriversDir
                                )
 
-parser = ArgumentParser()
-parser.add_argument("command",
-                    help="[start|stop|reset|restart|status]")
-parser.add_argument("param", nargs='?',
-                    help="command parameters")
-parser.add_argument("-d", "--debug", action="store_true",
-                    help="Do not daemonize")
-parser.add_argument("-v", "--verbose", action="store_true",
-                    help="Show debug output in log file")
-args = parser.parse_args()
+# parser = ArgumentParser()
+# parser.add_argument("command",
+#                     help="[start|stop|reset|restart|status]")
+# parser.add_argument("param", nargs='?',
+#                     help="command parameters")
+# parser.add_argument("-d", "--debug", action="store_true",
+#                     help="Do not daemonize")
+# parser.add_argument("-v", "--verbose", action="store_true",
+#                     help="Show debug output in log file")
+# args = parser.parse_args()
 
 log = logging.getLogger('gncd')
 logging.basicConfig(
@@ -207,6 +207,7 @@ class GNCDaemon():
             if self._allDevices is None:
                 return
             for dev in self._allDevices:
+                if dev is None: continue
                 if self._settings.get(dev._id) is None:
                     self._settings[dev._id] = Dict(dev.defaults())
                 dev.defs = self._settings[dev._id]
@@ -507,8 +508,8 @@ def main():
         daemon.worker = daemon_main
         daemon.do_action(args.command)
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
-# if __name__=='__main__':
-#     daemon_main()
+if __name__=='__main__':
+    daemon_main()

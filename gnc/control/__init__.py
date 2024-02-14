@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from coredevice.device import Device
 from daemonocle import Daemon
-from Pyro5.api import expose
+from Pyro5.api import callback, expose
 from maps import Map, MapObject
 from pydispatch import dispatcher
 from enum import Enum
@@ -12,6 +12,7 @@ from Pyro5.api import expose, oneway, behavior, Proxy
 import numpy as np
 import math
 from gnc.protocols import ManualControlLike, AutomaticControlLike
+from gnc.guidance import Gamepad
 
 OperationMode = Enum("OperationMode", "AUTO MANUAL")
 
@@ -146,6 +147,7 @@ class Controller():
         self._appr = False
         self._output = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # velocity vector
         self.failed = False
+        self.js = None
 
         # dispatcher.connect(self.checkCurrentRouteValid, sender=self._map, signal=)
         self.targetVel = 0.1
@@ -209,12 +211,20 @@ class Controller():
         self._mode = OperationMode[mode]
         dispatcher.send(modeChangedEvent, sender=self)
 
+    @callback
     def mode(self) -> str:
         '''Returns current operation mode'''
         return str(self._mode.name)
 
     def stopExec(self):
         self._shouldStop = True
+
+    def executeCommand(self, cmd):
+        cdd = Proxy("PYRONAME:coredevice.daemon")
+        try:
+            cdd.executeCommand(cmd)
+        except Exception as e:
+            log.exception(f"Failed to execute command '{cmd}'")
 
     @oneway
     def setApproach(self, appr: bool):
@@ -255,6 +265,21 @@ class Controller():
         log.debug(f"Route len: {len(self._routePoints)}")
         if self._autoUnit is not None: self._autoUnit.setRoute(self._routePoints)
 
+    def connectJoystick(self):
+        if Gamepad.available():
+            if self.js is None:
+                try:
+                    jsNum = 0
+                    jsClass = Gamepad.Gamepad
+                    if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber()
+                    if hasattr(self._manualUnit, 'jsClass'): jsClass = self._manualUnit.jsClass()
+                    self.js = jsClass(joystickNumber=jsNum)
+                    log.info("Joystick connected")
+                    return True
+                except Exception as e:
+                    log.exception("Connecting joystick failed")
+                    return False
+
     def main(self):
         log.info('Setting up...')
 
@@ -271,13 +296,30 @@ class Controller():
             self._manualUnit.setup()
             self._manualUnit.start()
 
+        self.connectJoystick()
+
         log.info('Setup complete')
         log.debug('Entering main loop')
         while True:
             if self._shouldStop: break
 
-            if self._mode == OperationMode.MANUAL: self.manualMain()
-            elif self._mode == OperationMode.AUTO: self.autoMain()
+            if self._manualUnit is not None:
+                self._manualUnit.update()
+            if self._autoUnit is not None:
+                self._autoUnit.update()
+
+            if self.js is not None and self.js.isConnected():
+                try:
+                    eventType, control, value = self.js.getNextEvent()
+                    if eventType == 'BUTTON':
+                        self._manualUnit.onButton(control, value)
+                    elif eventType == 'AXIS':
+                        self._manualUnit.onAxis(control, value)
+                except:
+                    log.exception("Allocating joystick event failed.")
+
+            if self._mode == OperationMode.MANUAL: self._output = self._manualUnit.output
+            elif self._mode == OperationMode.AUTO: self._output = self._autoUnit.output
 
             try:
                 asm.setSpeedVector(self._output) # TODO: switch to protocol check

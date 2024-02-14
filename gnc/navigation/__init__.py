@@ -51,7 +51,7 @@ class Navigation():
     def __init__(self, mapPath = '~/Default.map', _kRealInstance=False) -> None:
         log.info('------- Init -------')
         self._currentPosition = posDict
-        self._currentPosition["pos"] = [453.0, 26.0, 0.0] # TODO: Temporary start point
+        self._currentPosition["pos"] = [0.0, 0.0, 0.0] # TODO: Temporary start point
         self._ready = False
 
         self._device = None
@@ -92,7 +92,7 @@ class Navigation():
             self.loadObserver()
             self._observer.start()
             self._observer._ready = True
-            
+
 
         stillAliveTime = datetime.now()
 
@@ -166,7 +166,7 @@ class Navigation():
             else:
                 if sname != self.__class__.__name__: log.info(f'Skipping {sname} connection')
 
-            if hasattr(self, "_device"): self.connectHeadDevice()
+        if hasattr(self, "_device"): self.connectHeadDevice()
 
         if self.failed: return False
         return True

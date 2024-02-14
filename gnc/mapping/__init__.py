@@ -106,17 +106,21 @@ class Mapping():
             else:
                 if sname != self.__class__.__name__: log.info(f'Skipping {sname} connection')
 
-            if hasattr(self, "_device"): self.connectHeadDevice()
+        if hasattr(self, "_device"): self.connectHeadDevice()
 
         if self.failed: return False
         return True
 
     def connectHeadDevice(self):
-        try:
-            if isinstance(self._device, Proxy): self._device._pyroClaimOwnership() # type: ignore
-        except Exception as e:
-            log.error(f"Couldn't reclaim Gadget proxy. Reason: {e}")
-            self.failed = True
+        if self._ctrl:
+            try:
+                uri = str(self._ctrl.deviceUri())
+                self._device = Proxy(uri)
+                self._device._pyroBind()
+                log.debug('Head Device Unit connected')
+            except Exception as e:
+                log.error(f"Couldn't connect to Head Device Unit. Reason: {e}")
+                self.failed = True
 
     def initLayers(self):
         self._map.updateLayer('Guidance', Dict())
@@ -269,10 +273,13 @@ class Mapping():
         return []
 
     def saveMap(self):
-        if (datetime.now() - self.lastTimeMapSave).total_seconds() >= 2:
+        if (datetime.now() - self.lastTimeMapSave).total_seconds() >= 5:
             with Lock():
-                log.debug(f"Writing to map file. \n\tPosition: {self._currentPosition['pos']}")
-                self._map.save()
+                try:
+                    log.debug(f"Writing to map file. \n\tPosition: {self._currentPosition['pos']}")
+                    self._map.save()
+                except Exception as e:
+                    log.exception("Saving map failed")
             self.lastTimeMapSave = datetime.now()
 
     def main(self):
@@ -283,7 +290,11 @@ class Mapping():
 
         if self._scanner is not None:
             self._scanner.setup()
+            self._scanner.setHeadDevice(self._device)
             self._scanner.start()
+            orig = self._scanner.occupancyGridOrigin()
+            size = self._scanner.occupancyGridSize()
+            self._map.updateLayer('Occupancy Grid', properties=Dict(origin = orig, size = size))
 
         # self._map.updateLayer('Robots', Dict())
         # self._map.updateObject(
@@ -298,6 +309,13 @@ class Mapping():
             if self._shouldStop: break
             if self.shm is None: self.createShm()
             self.saveMap()
+            if self._scanner:
+                try:
+                    self._scanner.update()
+                except:
+                    log.exception("Scanning failed")
+                self.shmim = self._scanner.occupancyGrid()
+
         log.info('Exiting main loop')
 
 

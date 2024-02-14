@@ -22,6 +22,7 @@ dependencies = [
     "ply",
     "watchdog",
     "ahrs@git+https://github.com/Mayitzin/ahrs.git",
+    "lockfile@git+https://github.com/jonasrauber/lockfile.git",
 ]
 
 # [project.scripts]
