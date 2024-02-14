@@ -217,7 +217,7 @@ class GNCDaemon():
             if self._allDevices is None:
                 return
             for dev in self._allDevices:
-                self._settings[dev._id] = Dict(dev.defaults())
+                if dev: self._settings[dev._id] = Dict(dev.defaults())
             self.saveSettings()
 
     def saveSettings(self):

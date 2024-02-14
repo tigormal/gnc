@@ -23,6 +23,7 @@ dependencies = [
     "watchdog",
     "ahrs@git+https://github.com/Mayitzin/ahrs.git",
     "lockfile@git+https://github.com/jonasrauber/lockfile.git",
+    "filterpy",
 ]
 
 # [project.scripts]
