@@ -250,12 +250,12 @@ class GNCDaemon():
                 # Load yaml and set defs in dev
                 with open(dictPath, 'r') as file:
                     settingsDict = safe_load(file)
-                    self._settings[dev._id] = Dict(settingsDict)
+                    self._settings[dev._id] = settingsDict
             else:
                 # Get default settings from dict and save
-                self._settings[dev._id] = Dict(dev.defaults())
+                self._settings[dev._id] = dev.defaults()
                 self.saveSettings(dev._id)
-            dev.defs = self._settings[dev._id]
+            dev.defs = Dict(self._settings[dev._id])
         log.debug("Loaded settings")
         # print(self._settings)
 
