@@ -245,6 +245,7 @@ class GNCDaemon():
         if not settingsDir.exists(): os.mkdir(settingsDir) # create dir if not existant
         if self._allDevices is None: return
         for dev in self._allDevices:
+            if dev is None: continue
             dictPath = settingsDir / dev._id
             if dictPath.exists() and dictPath.is_file():
                 # Load yaml and set defs in dev
