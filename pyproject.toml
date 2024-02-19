@@ -21,13 +21,20 @@ dependencies = [
     "daemonocle",
     "ply",
     "watchdog",
-    "ahrs@git+https://github.com/Mayitzin/ahrs.git",
+    # "ahrs@git+https://github.com/Mayitzin/ahrs.git",
     "lockfile@git+https://github.com/jonasrauber/lockfile.git",
     "filterpy",
 ]
 
 [project.scripts]
-gncd = "gncd:main"
+gncd = "gnc.gncd:main"
 
 [tool.setuptools]
-packages = ["maps", "gnc"]
+packages = [
+    "maps",
+    "gnc",
+    "gnc.control",
+    "gnc.guidance",
+    "gnc.navigation",
+    "gnc.mapping",
+]

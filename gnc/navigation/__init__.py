@@ -1,19 +1,16 @@
 
 from datetime import datetime
-# from ipaddress import _N
 import logging
 import math
 import time
 from coredevice.gadget import Device
 from maps import Map
-from gnc.navigation.pos import Position
 from gnc.protocols import NavigationObserverLike
 from typing import Any, Protocol
 from Pyro5.api import expose, oneway, behavior, Proxy
 from addict import Dict
 import shapely as sh
 from pydispatch import dispatcher
-from drivers.imu_uwb import IMU_UWB_WB_Observer
 from Pyro5.errors import get_pyro_traceback
 
 positionUpdatedEvent = 'positionUpdatedEvent'
