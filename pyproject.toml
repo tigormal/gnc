@@ -26,8 +26,8 @@ dependencies = [
     "filterpy",
 ]
 
-# [project.scripts]
-# cdd = "coredevice.cdd:main"
+[project.scripts]
+gncd = "gncd:main"
 
 [tool.setuptools]
 packages = ["maps", "gnc"]
