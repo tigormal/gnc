@@ -193,53 +193,6 @@ class GNCDaemon():
                         result.append(dev)
         return result
 
-    # def loadSettings(self):
-    #     config_path = Path(defConfigDir + gncSettingsName)
-    #     config_path = config_path.expanduser()
-    #     config_path = config_path.resolve()
-    #     if config_path.exists():
-    #         config_f = None
-    #         config_d = None
-    #         try:
-    #             config_f = open(config_path, 'r')
-    #         except Exception:
-    #             log.warning('Could not load settings file')
-    #         if config_f is not None:
-    #             config_d = safe_load(config_f)
-    #             config_f.close()
-    #             # print(config_d)  # Check if we imported the desired way
-    #         if config_d is not None:
-    #             self._settings = Dict(config_d)
-
-    #         # Apply settings to all devices
-    #         if self._allDevices is None:
-    #             return
-    #         for dev in self._allDevices:
-    #             if dev is None: continue
-    #             if self._settings.get(dev._id) is None:
-    #                 self._settings[dev._id] = Dict(dev.defaults())
-    #             dev.defs = self._settings[dev._id]
-    #     else:
-    #         # Create defaults
-    #         log.warning('Could not find settings file. Creating one')
-    #         if self._allDevices is None:
-    #             return
-    #         for dev in self._allDevices:
-    #             if dev: self._settings[dev._id] = Dict(dev.defaults())
-    #         self.saveSettings()
-
-    # def saveSettings(self):
-    #     config_path = Path(defConfigDir + gncSettingsName)
-    #     config_path = config_path.expanduser()
-    #     config_path = config_path.resolve()
-    #     try:
-    #         settingsDict = self._settings.to_dict()
-    #         with open(config_path, 'w') as yaml_file:
-    #             dump(settingsDict, yaml_file, default_flow_style=False)
-    #         log.debug(f"Settings file saved")
-    #     except Exception as e:
-    #         log.error(f"Could not save settings. Reason: {e}")
-
     def loadSettings(self):
         settingsDir = Path(defConfigDir + "Settings").expanduser().resolve() # resolve path
         if not settingsDir.exists(): os.mkdir(settingsDir) # create dir if not existant
@@ -252,6 +205,7 @@ class GNCDaemon():
                 with open(dictPath, 'r') as file:
                     settingsDict = safe_load(file)
                     self._settings[dev._id] = settingsDict
+                    # TODO: update existing dict from defaults if those have changed
             else:
                 # Get default settings from dict and save
                 self._settings[dev._id] = dev.defaults()

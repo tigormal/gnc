@@ -10,7 +10,7 @@ from typing import Any, Optional
 from coredevice.gadget import Gadget
 from Pyro5.api import expose, oneway, behavior, Proxy
 import numpy as np
-import math
+import math, time
 from gnc.protocols import ManualControlLike, AutomaticControlLike
 from gnc.guidance import Gamepad
 
@@ -236,7 +236,7 @@ class Controller():
     def connectJoystick(self):
         log.info("Connecting joystick...")
         jsNum = 0
-        if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber() #type: ignore
+        # if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber() #type: ignore
         startTime = datetime.now()
         try:
             # log.debug("Connecting joystick...")
@@ -252,8 +252,9 @@ class Controller():
                         return True
                     except Exception as e:
                         log.error(f"Connecting joystick failed. Reason: {e}")
-                        return False
-                return False
+                        time.sleep(0.5)
+                        # return False
+            return False
         except:
             log.exception("Joystick cannot be connected")
 
