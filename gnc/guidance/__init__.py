@@ -344,7 +344,8 @@ class Guidance():
         log.info('Setting up...')
         shouldPlan = False
 
-        while not self.connectSystems(): pass
+        while not self.connectSystems():
+            if self._shouldStop: return
 
         if self._planner is not None:
             self._planner.setup()

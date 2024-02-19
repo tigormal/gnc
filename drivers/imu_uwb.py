@@ -351,6 +351,6 @@ class IMU_UWB_WB_Observer():
 
 	def values(self) -> tuple[list[float], list[float], list[float]]:
 		return self.pos, self.vel, self.rot
-	
+
 	def isReady(self) -> bool:
 		return self.ready

@@ -1,8 +1,9 @@
 from typing import Iterable, Protocol, Annotated, List, runtime_checkable
 from PIL.Image import Image
+from coredevice.proto import DeviceProtocol
 
 @runtime_checkable
-class NavigationObserverLike(Protocol):
+class NavigationObserverLike(DeviceProtocol, Protocol):
 
     def setHeadDevice(self, dev):
         ...
@@ -21,7 +22,7 @@ class NavigationObserverLike(Protocol):
 
 
 @runtime_checkable
-class TrajectoryGeneratorLike(Protocol):
+class TrajectoryGeneratorLike(DeviceProtocol, Protocol):
 
     def setStartCoords(self, coords: tuple[int, int]):
         ...
@@ -40,7 +41,7 @@ class TrajectoryGeneratorLike(Protocol):
 
 
 @runtime_checkable
-class ManualControlLike(Protocol):
+class ManualControlLike(DeviceProtocol, Protocol):
 
     def setMaxVelocity(self, speed: float):
         ...
@@ -57,7 +58,7 @@ class ManualControlLike(Protocol):
 
 
 @runtime_checkable
-class AutomaticControlLike(Protocol):
+class AutomaticControlLike(DeviceProtocol, Protocol):
 
     def setRoute(self, points: list[Iterable[int | float]]):
         ...
@@ -86,7 +87,7 @@ class AutomaticControlLike(Protocol):
 
 
 @runtime_checkable
-class Mapping2DScannerLike(Protocol):
+class Mapping2DScannerLike(DeviceProtocol, Protocol):
 
     def occupancyGridMatrix(self) -> Iterable[Iterable[int]]:
         ...

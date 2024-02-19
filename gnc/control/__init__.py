@@ -6,7 +6,7 @@ from Pyro5.api import callback, expose
 from maps import Map, MapObject
 from pydispatch import dispatcher
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 from coredevice.gadget import Gadget
 from Pyro5.api import expose, oneway, behavior, Proxy
 import numpy as np
@@ -82,55 +82,6 @@ class PIDController:
         return output
 
 
-def getDistance(p1, p2):
-    """
-    Calculate distance
-    :param p1: list, point1
-    :param p2: list, point2
-    :return: float, distance
-    """
-    dx = p1[0] - p2[0]
-    dy = p1[1] - p2[1]
-    return math.hypot(dx, dy)
-
-
-class Trajectory:
-    def __init__(self, routePoints: list[tuple[int, int]], L = 5):
-        """
-        Define a trajectory class
-        :param routePoints: list, list of positions
-        :param L: int, look ahead distance
-        """
-        traj_x, traj_y = zip(*routePoints)
-        self.traj_x = traj_x
-        self.traj_y = traj_y
-        self.last_idx = 0
-        self.L = L
-
-    def getPoint(self, idx) -> list[int]:
-        return [self.traj_x[idx], self.traj_y[idx]]
-
-    def getTargetPoint(self, pos) -> list[int]:
-        """
-        Get the next look ahead point
-        :param pos: list, vehicle position
-        :return: list, target point
-        """
-        target_idx = self.last_idx
-        target_point = self.getPoint(target_idx)
-        curr_dist = getDistance(pos, target_point)
-
-        while curr_dist < self.L and target_idx < len(self.traj_x) - 1:
-            target_idx += 1
-            target_point = self.getPoint(target_idx)
-            curr_dist = getDistance(pos, target_point)
-
-        self.last_idx = target_idx
-        return self.getPoint(target_idx)
-
-
-
-
 @behavior(instance_mode='single')
 @expose
 class Controller():
@@ -143,10 +94,11 @@ class Controller():
         self._guid: Proxy
         self._nav: Proxy
         self._map: Proxy
-        self._device: Proxy | Gadget = Gadget()
+        self._device: Proxy | Gadget | None = None
+        self._headConnected = False
         self._appr = False
         self._output = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # velocity vector
-        self.failed = False
+        self._failed = False
         self.js = None
 
         # dispatcher.connect(self.checkCurrentRouteValid, sender=self._map, signal=)
@@ -154,13 +106,20 @@ class Controller():
         self.targetDist = 1.0
         self.startedFollow = False
 
-        self._autoUnit = None # type: ignore
-        self._manualUnit = None # type: ignore
+        self._autoUnit: Optional[AutomaticControlLike] = None
+        self._manualUnit: Optional[ManualControlLike] = None
 
         self.pos = [0.0] * 3
         self.vel = [0.0] * 3
         self.att = [0.0] * 3
 
+    @property
+    def failed(self): return self._failed
+
+    @failed.setter
+    def failed(self, f):
+        log.info(f"Failed is {f}")
+        self._failed = f
 
     def failAck(self):
         self.failed = False
@@ -169,7 +128,8 @@ class Controller():
         self._uris = uris
 
     def connectSystems(self) -> bool:
-        if self.failed: return False
+        # log.debug("connect systems")
+        if self._failed: return False
 
         svars = {
                 "Guidance": "_guid",
@@ -178,6 +138,7 @@ class Controller():
                 "Mapping": "_map",
                 # "Controller": "_ctrl"
            }
+        # log.debug(str(self._uris))
         for sname, uri in self._uris.items():
 
             if sname in list(svars) and uri != '':
@@ -192,17 +153,24 @@ class Controller():
             else:
                 if sname != self.__class__.__name__: log.info(f'Skipping {sname} connection')
 
-            if hasattr(self, "_device"): self.connectHeadDevice()
+        if hasattr(self, "_device"): self.connectHeadDevice()
 
-        if self.failed: return False
+        if self._failed: return False
         return True
 
     def connectHeadDevice(self):
         try:
+            # log.info("Connecting Head device")
+            self._device = Gadget.thisGadget()
             if isinstance(self._device, Proxy): self._device._pyroClaimOwnership() # type: ignore
+            self._headConnected = True
+            log.info("Head device connected")
         except Exception as e:
-            log.error(f"Couldn't reclaim Gadget proxy. Reason: {e}")
+            log.error(f"Couldn't connect Head Device. Reason: {e}")
             self.failed = True
+
+    @callback
+    def headConnected(self) -> bool: return self._headConnected
 
     @oneway
     def setMode(self, mode: str):
@@ -266,37 +234,60 @@ class Controller():
         if self._autoUnit is not None: self._autoUnit.setRoute(self._routePoints)
 
     def connectJoystick(self):
-        if Gamepad.available():
-            if self.js is None:
-                try:
-                    jsNum = 0
-                    jsClass = Gamepad.Gamepad
-                    if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber()
-                    if hasattr(self._manualUnit, 'jsClass'): jsClass = self._manualUnit.jsClass()
-                    self.js = jsClass(joystickNumber=jsNum)
-                    log.info("Joystick connected")
-                    return True
-                except Exception as e:
-                    log.exception("Connecting joystick failed")
-                    return False
+        log.info("Connecting joystick...")
+        jsNum = 0
+        if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber() #type: ignore
+        startTime = datetime.now()
+        try:
+            # log.debug("Connecting joystick...")
+            while not Gamepad.available(jsNum):
+                if self._shouldStop: return
+                if (datetime.now() - startTime).total_seconds() >= 5: break
+                if self.js is None:
+                    try:
+                        jsClass = Gamepad.Gamepad
+                        if hasattr(self._manualUnit, 'jsClass'): jsClass = self._manualUnit.jsClass() #type: ignore
+                        self.js = jsClass(joystickNumber=jsNum)
+                        log.info("Joystick connected")
+                        return True
+                    except Exception as e:
+                        log.error(f"Connecting joystick failed. Reason: {e}")
+                        return False
+                return False
+        except:
+            log.exception("Joystick cannot be connected")
 
     def main(self):
         log.info('Setting up...')
 
-        while not self.connectSystems(): pass
+        while not self.connectSystems():
+            if self._shouldStop:
+                log.debug("should stop is true")
+                return
 
         asm = self._device.assembly()
-        asm._pyroBind()
+        if isinstance(asm, Proxy):
+            if asm._pyroBind(): log.info("Assembly found") # TODO: catch connection exceptions
+
 
         if self._autoUnit is not None:
-            self._autoUnit.setup()
-            self._autoUnit.start()
+            log.info("Starting Auto unit")
+            try:
+                self._autoUnit.setup()
+                self._autoUnit.start()
+            except:
+                log.exception("Auto unit failed")
 
         if self._manualUnit is not None:
-            self._manualUnit.setup()
-            self._manualUnit.start()
+            log.info("Starting Manual unit")
+            try:
+                self._manualUnit.setup()
+                self._manualUnit.start()
+            except:
+                log.exception("Manual unit failed")
 
-        self.connectJoystick()
+        js = self.connectJoystick()
+        if not js: log.warning("Joystick is unavailable. Check connection")
 
         log.info('Setup complete')
         log.debug('Entering main loop')
@@ -308,21 +299,22 @@ class Controller():
             if self._autoUnit is not None:
                 self._autoUnit.update()
 
-            if self.js is not None and self.js.isConnected():
+            if self._manualUnit and self.js is not None and self.js.isConnected():
                 try:
                     eventType, control, value = self.js.getNextEvent()
-                    if eventType == 'BUTTON':
-                        self._manualUnit.onButton(control, value)
-                    elif eventType == 'AXIS':
-                        self._manualUnit.onAxis(control, value)
+                    if not (control is None and value is None):
+                        if eventType == 'BUTTON':
+                            if hasattr(self._manualUnit, "onButton"): self._manualUnit.onButton(str(control), bool(value))
+                        elif eventType == 'AXIS' and value is not None:
+                            if hasattr(self._manualUnit, "onAxis"):self._manualUnit.onAxis(str(control), value)
                 except:
                     log.exception("Allocating joystick event failed.")
 
-            if self._mode == OperationMode.MANUAL: self._output = self._manualUnit.output
-            elif self._mode == OperationMode.AUTO: self._output = self._autoUnit.output
+            if self._mode == OperationMode.MANUAL and self._manualUnit: self._output = self._manualUnit.output
+            elif self._mode == OperationMode.AUTO and self._autoUnit: self._output = self._autoUnit.output
 
             try:
-                asm.setSpeedVector(self._output) # TODO: switch to protocol check
+                if asm and hasattr(asm, "setSpeedVector"): asm.setSpeedVector(self._output) #type: ignore # TODO: switch to protocol check
             except Exception as e:
                 log.exception(f"Allocating velocity vector failed.")
 
@@ -348,7 +340,7 @@ class Controller():
     @autoUnit.setter
     def autoUnit(self, u: Device):
         self._autoUnit = u # type: ignore
-        self._autoUnit: AutomaticControlLike
+        # self._autoUnit: AutomaticControlLike
         self._autoUnit._genId('Controller')
         self._autoUnit._getLogger()
         log.info(f"Set automatic control unit: {u.name} [{u.kind}]")
@@ -362,7 +354,7 @@ class Controller():
     @manualUnit.setter
     def manualUnit(self, u: Device):
         self._manualUnit = u # type: ignore
-        self._manualUnit: ManualControlLike
+        # self._manualUnit: ManualControlLike
         self._manualUnit._genId('Controller')
         self._manualUnit._getLogger()
         log.info(f"Set manual control unit: {u.name} [{u.kind}]")

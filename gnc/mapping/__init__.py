@@ -5,7 +5,7 @@ from addict import Dict
 import shapely as sh
 from maps import Map, MapObject, MapLayer
 from datetime import datetime
-import logging, math
+import logging, math, time
 from pydispatch import dispatcher
 from coredevice.gadget import Device, Gadget
 import numpy as np
@@ -42,15 +42,16 @@ class Mapping():
 
         self._ready = False
 
-        self._map: Map
+        self._map: Map | None = None
         self._mapPath = mapPath
         self._ctrl: Proxy
         self._guid: Proxy
         self._opt: Proxy
         self._nav: Proxy
 
-        self._device: Proxy | Gadget = Gadget()
+        self._device: Proxy | Gadget | None = None # Gadget()
         self._scanner = None
+        self._scannerFailed = False
 
         self._occGridLayerName = 'Occupancy Grid'
         self._occGridShmName = ''
@@ -60,7 +61,7 @@ class Mapping():
         self.shm = None
 
         self._shouldStop = False
-        self.failed = False
+        self._failed = False
 
         self.lastTimeMapSave = datetime.now()
 
@@ -69,8 +70,9 @@ class Mapping():
 
 
     def updateMapPosition(self):
+        if self._map is None: return
         self._map.updateObject(
-            'Robots', 'This robot', Dict(geometry=sh.Point(self._currentPosition["pos"]), heading=math.degrees(self._currentPosition["att"][2]))
+            'Units', 'This robot', Dict(geometry=sh.Point(self._currentPosition["pos"]), heading=math.degrees(self._currentPosition["att"][2]))
         )
 
     def stopExec(self):
@@ -83,7 +85,7 @@ class Mapping():
         self._uris = uris
 
     def connectSystems(self) -> bool:
-        if self.failed: return False
+        if self._failed: return False
 
         svars = {
                 "Guidance": "_guid",
@@ -102,32 +104,48 @@ class Mapping():
                 except Exception as e:
                     svars[sname] = None # type: ignore
                     log.error(f"Couldn't connect to {sname}. Reason: {e}")
-                    self.failed = True
+                    self._failed = True
             else:
                 if sname != self.__class__.__name__: log.info(f'Skipping {sname} connection')
 
         if hasattr(self, "_device"): self.connectHeadDevice()
 
-        if self.failed: return False
+        if self._failed: return False
         return True
 
     def connectHeadDevice(self):
         if self._ctrl:
             try:
+                while not self._ctrl.headConnected():
+                    time.sleep(0.5)
                 uri = str(self._ctrl.deviceUri())
                 self._device = Proxy(uri)
                 self._device._pyroBind()
                 log.debug('Head Device Unit connected')
             except Exception as e:
                 log.error(f"Couldn't connect to Head Device Unit. Reason: {e}")
-                self.failed = True
+                self._failed = True
 
     def initLayers(self):
+        if self._map is None: return
         self._map.updateLayer('Guidance', Dict())
-        self._map.updateLayer('Robots', Dict())
+        self._map.updateLayer('Units', Dict())
+
+    @property
+    def failed(self): return self._failed
+
+    @failed.setter
+    def failed(self, f):
+        log.info(f"Failed is {f}")
+        self._failed = f
+
+    def failAck(self):
+        self.failed = False
+        self._scannerFailed = False
 
     @oneway
     def setNearestTarget(self, coords: list | tuple | None):
+        if self._map is None: return
         if coords is None:
             try:
                 self._map.deleteObjectNamed('Guidance', 'Nearest point')
@@ -142,6 +160,7 @@ class Mapping():
 
     @oneway
     def setRouteTarget(self, coords: list | tuple | None):
+        if self._map is None: return
         if coords is None:
             try:
                 self._map.deleteObjectNamed('Guidance', 'Target')
@@ -156,6 +175,7 @@ class Mapping():
 
     @oneway
     def setRoute(self, points):
+        if self._map is None: return
         if len(points) <=1 or points is None:
             if o := self._map['Guidance']['Route']:
                 self._map.deleteObject(o)
@@ -176,18 +196,20 @@ class Mapping():
 
     @oneway
     def setPosition(self, d):
+        if self._map is None: return
         if d is not None:
             self._currentPosition = d
             x = d["pos"][0]; y = d["pos"][1]
             yaw = d["att"][2]
             self._map.updateObject(
-                'Robots', 'This robot', Dict(geometry=sh.Point((x, y)), heading=math.degrees(yaw), icon='Person')
+                'Units', 'This robot', Dict(geometry=sh.Point((x, y)), heading=math.degrees(yaw), icon='Person')
             )
         else:
-            self._map.deleteObjectNamed('Robots', 'This robot')
+            self._map.deleteObjectNamed('Units', 'This robot')
         # self._map.save()
 
     def getMapPointCoords(self, layer, name) -> list:
+        if self._map is None: return []
         l = self._map[layer]
         if l:
             o = l[name]
@@ -254,6 +276,7 @@ class Mapping():
 
 
     def getLayerInfo(self):
+        if self._map is None: return {}
         layer = self._map[self._occGridLayerName]
         if not layer:
             log.critical('Attempting to build route with invalid layer')
@@ -265,6 +288,7 @@ class Mapping():
         }
 
     def getMapLine(self, layer, name) -> list:
+        if self._map is None: return []
         l = self._map[layer]
         if l:
             o = l[name]
@@ -273,6 +297,7 @@ class Mapping():
         return []
 
     def saveMap(self):
+        if self._map is None: return
         if (datetime.now() - self.lastTimeMapSave).total_seconds() >= 5:
             with Lock():
                 try:
@@ -284,23 +309,30 @@ class Mapping():
 
     def main(self):
         log.info('Setting up...')
-        self._map = Map.load(self._mapPath)
-
         while not self.connectSystems(): pass
 
-        if self._scanner is not None:
-            self._scanner.setup()
-            self._scanner.setHeadDevice(self._device)
-            self._scanner.start()
-            orig = self._scanner.occupancyGridOrigin()
-            size = self._scanner.occupancyGridSize()
-            self._map.updateLayer('Occupancy Grid', properties=Dict(origin = orig, size = size))
+        while not self._map:
+            try:
+                if self._shouldStop: return
+                if not self._failed: self._map = Map.load(self._mapPath)
+                time.sleep(0.5)
+            except Exception as e:
+                log.error(f"Failed to load map file. Reason: {e}")
+                self._failed = True
 
-        # self._map.updateLayer('Robots', Dict())
-        # self._map.updateObject(
-        # 	'Robots', 'This robot', Dict(geometry=sh.Point(self._currentPosition["pos"]), icon='Me', color=1)
-        # )
-        # self._map.save()
+        if self._scanner is not None:
+            try:
+                self._scanner.setup()
+                self._scanner.setHeadDevice(self._device)
+                self._scanner.start()
+                # TODO: Do the opposite give origin and size from layer to scanner
+                orig = self._scanner.occupancyGridOrigin()
+                size = self._scanner.occupancyGridSize()
+                if orig and size: self._map.updateLayer('Occupancy Grid', properties=Dict(origin = list(orig), size = list(size)))
+            except:
+                log.exception("Scanner failed")
+                self._scannerFailed = True
+
         self.createShm()
 
         log.info('Setup complete')
@@ -309,14 +341,16 @@ class Mapping():
             if self._shouldStop: break
             if self.shm is None: self.createShm()
             self.saveMap()
-            if self._scanner:
+            if self._scanner and not self._scannerFailed:
                 try:
                     self._scanner.update()
+                    self.shmim = self._scanner.occupancyGrid() # FIXME: copy bytes
                 except:
                     log.exception("Scanning failed")
-                self.shmim = self._scanner.occupancyGrid()
+                    self._scannerFailed = True
 
         log.info('Exiting main loop')
+        self.resetShm()
 
 
     @property

@@ -24,16 +24,15 @@ from coredevice.gadget import (Gadget,
                                defDriversDir
                                )
 
-# parser = ArgumentParser()
-# parser.add_argument("command",
-#                     help="[start|stop|reset|restart|status]")
-# parser.add_argument("param", nargs='?',
-#                     help="command parameters")
-# parser.add_argument("-d", "--debug", action="store_true",
-#                     help="Do not daemonize")
-# parser.add_argument("-v", "--verbose", action="store_true",
-#                     help="Show debug output in log file")
-# args = parser.parse_args()
+parser = ArgumentParser()
+parser.add_argument("command",
+                    help="[start|stop|reset|restart|status]")
+parser.add_argument("param", nargs='?',
+                    help="command parameters")
+parser.add_argument("-d", "--debug", action="store_true",
+                    help="Do not daemonize")
+parser.add_argument("-v", "--verbose", action="store_true",
+                    help="Show debug output in log file")
 
 log = logging.getLogger('gncd')
 logging.basicConfig(
@@ -131,6 +130,15 @@ class GNCDaemon():
         self.nameserv: Proxy
         self.uripath = '/tmp/gnc.'
 
+    @oneway
+    @expose
+    def failAck(self):
+        if self.gs: self.gs.failAck()
+        if self.ns: self.ns.failAck()
+        if self.cs: self.cs.failAck()
+        if self.ms: self.ms.failAck()
+        # if self.os: self.os.failAck()
+
     def loadUnits(self, unitsDict):
         result = []
         for key, value in unitsDict.items():
@@ -185,52 +193,89 @@ class GNCDaemon():
                         result.append(dev)
         return result
 
+    # def loadSettings(self):
+    #     config_path = Path(defConfigDir + gncSettingsName)
+    #     config_path = config_path.expanduser()
+    #     config_path = config_path.resolve()
+    #     if config_path.exists():
+    #         config_f = None
+    #         config_d = None
+    #         try:
+    #             config_f = open(config_path, 'r')
+    #         except Exception:
+    #             log.warning('Could not load settings file')
+    #         if config_f is not None:
+    #             config_d = safe_load(config_f)
+    #             config_f.close()
+    #             # print(config_d)  # Check if we imported the desired way
+    #         if config_d is not None:
+    #             self._settings = Dict(config_d)
+
+    #         # Apply settings to all devices
+    #         if self._allDevices is None:
+    #             return
+    #         for dev in self._allDevices:
+    #             if dev is None: continue
+    #             if self._settings.get(dev._id) is None:
+    #                 self._settings[dev._id] = Dict(dev.defaults())
+    #             dev.defs = self._settings[dev._id]
+    #     else:
+    #         # Create defaults
+    #         log.warning('Could not find settings file. Creating one')
+    #         if self._allDevices is None:
+    #             return
+    #         for dev in self._allDevices:
+    #             if dev: self._settings[dev._id] = Dict(dev.defaults())
+    #         self.saveSettings()
+
+    # def saveSettings(self):
+    #     config_path = Path(defConfigDir + gncSettingsName)
+    #     config_path = config_path.expanduser()
+    #     config_path = config_path.resolve()
+    #     try:
+    #         settingsDict = self._settings.to_dict()
+    #         with open(config_path, 'w') as yaml_file:
+    #             dump(settingsDict, yaml_file, default_flow_style=False)
+    #         log.debug(f"Settings file saved")
+    #     except Exception as e:
+    #         log.error(f"Could not save settings. Reason: {e}")
+
     def loadSettings(self):
-        config_path = Path(defConfigDir + gncSettingsName)
-        config_path = config_path.expanduser()
-        config_path = config_path.resolve()
-        if config_path.exists():
-            config_f = None
-            config_d = None
-            try:
-                config_f = open(config_path, 'r')
-            except Exception:
-                log.warning('Could not load settings file')
-            if config_f is not None:
-                config_d = safe_load(config_f)
-                config_f.close()
-                # print(config_d)  # Check if we imported the desired way
-            if config_d is not None:
-                self._settings = Dict(config_d)
+        settingsDir = Path(defConfigDir + "Settings").expanduser().resolve() # resolve path
+        if not settingsDir.exists(): os.mkdir(settingsDir) # create dir if not existant
+        if self._allDevices is None: return
+        for dev in self._allDevices:
+            dictPath = settingsDir / dev._id
+            if dictPath.exists() and dictPath.is_file():
+                # Load yaml and set defs in dev
+                with open(dictPath, 'r') as file:
+                    settingsDict = safe_load(file)
+                    self._settings[dev._id] = Dict(settingsDict)
+            else:
+                # Get default settings from dict and save
+                self._settings[dev._id] = Dict(dev.defaults())
+                self.saveSettings(dev._id)
+            dev.defs = self._settings[dev._id]
+        log.debug("Loaded settings")
+        # print(self._settings)
 
-            # Apply settings to all devices
-            if self._allDevices is None:
-                return
-            for dev in self._allDevices:
-                if dev is None: continue
-                if self._settings.get(dev._id) is None:
-                    self._settings[dev._id] = Dict(dev.defaults())
-                dev.defs = self._settings[dev._id]
-        else:
-            # Create defaults
-            log.warning('Could not find settings file. Creating one')
-            if self._allDevices is None:
-                return
-            for dev in self._allDevices:
-                if dev: self._settings[dev._id] = Dict(dev.defaults())
-            self.saveSettings()
+    def saveSettings(self, devId = None):
+        settingsDir = Path(defConfigDir + "Settings").expanduser().resolve()
+        if not settingsDir.exists(): os.mkdir(settingsDir)
+        if devId is not None:
+            settingsDict = self._settings[devId]
+            dictPath = settingsDir / devId
+            with open(dictPath, 'w') as file:
+                dump(settingsDict, file)
+            log.debug(f"Settings saved for device {devId}")
+            return
 
-    def saveSettings(self):
-        config_path = Path(defConfigDir + gncSettingsName)
-        config_path = config_path.expanduser()
-        config_path = config_path.resolve()
-        try:
-            settingsDict = self._settings.to_dict()
-            with open(config_path, 'w') as yaml_file:
-                dump(settingsDict, yaml_file, default_flow_style=False)
-            log.debug(f"Settings file saved")
-        except Exception as e:
-            log.error(f"Could not save settings. Reason: {e}")
+        for devId, settingsDict in self._settings.items():
+            if settingsDict is None or settingsDict == Dict(): continue
+            dictPath = settingsDir / devId
+            with open(dictPath, 'w') as file:
+                dump(settingsDict, file)
+        log.debug(f"Settings saved for all devices")
 
     @oneway
     @expose
@@ -488,15 +533,23 @@ class ExecutorDaemonControl(daemonocle.Daemon):
             return
         self.proxy.stop()
 
+    @daemonocle.expose_action
+    def failack(self, *args, **kwargs):
+        log.debug("Calling failack")
+        if not self.findProxy():
+            return
+        self.proxy.failAck()
+
 
 def main():
-    if args.verbose:
-        print("Verbose mode")
-        log.setLevel(logging.DEBUG)
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
-        logging.getLogger().setLevel(logging.INFO)
+    args = parser.parse_args()
+    # if args.verbose:
+    #     print("Verbose mode")
+    #     log.setLevel(logging.DEBUG)
+    #     logging.getLogger().setLevel(logging.DEBUG)
+    # else:
+    #     log.setLevel(logging.INFO)
+    #     logging.getLogger().setLevel(logging.INFO)
     if args.debug:
         print("Running in DEBUG mode")
         daemon_main()
@@ -508,8 +561,8 @@ def main():
         daemon.worker = daemon_main
         daemon.do_action(args.command)
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
 
-if __name__=='__main__':
-    daemon_main()
+# if __name__=='__main__':
+#     daemon_main()

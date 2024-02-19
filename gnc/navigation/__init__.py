@@ -3,7 +3,7 @@ from datetime import datetime
 # from ipaddress import _N
 import logging
 import math
-
+import time
 from coredevice.gadget import Device
 from maps import Map
 from gnc.navigation.pos import Position
@@ -174,6 +174,8 @@ class Navigation():
     def connectHeadDevice(self):
         if self._ctrl:
             try:
+                while not self._ctrl.headConnected():
+                    time.sleep(0.5)
                 uri = str(self._ctrl.deviceUri())
                 self._device = Proxy(uri)
                 self._device._pyroBind()
