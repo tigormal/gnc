@@ -25,6 +25,8 @@ from coredevice.gadget import (Gadget,
                                )
 
 parser = ArgumentParser()
+parser.add_argument("system",
+                    help="[gs|ns|cs|os|ms]")
 parser.add_argument("command",
                     help="[start|stop|reset|restart|status]")
 parser.add_argument("param", nargs='?',
@@ -35,9 +37,14 @@ parser.add_argument("-v", "--verbose", action="store_true",
                     help="Show debug output in log file")
 
 log = logging.getLogger('gncd')
+logging.addLevelName(logging.DEBUG, "DBG")
+logging.addLevelName(logging.INFO, "INF")
+logging.addLevelName(logging.WARNING, "WRN")
+logging.addLevelName(logging.ERROR, "ERR")
+logging.addLevelName(logging.CRITICAL, "FTL")
 logging.basicConfig(
-    # format='%(asctime)s.%(msecs)03d %(levelname)-8s [%(name)s] %(message)s',
-    format='%(asctime)s.%(msecs)03d %(levelname)s [%(name)s] %(message)s',
+    format='%(asctime)s.%(msecs)03d %(levelname)-3s [%(name)s] %(message)s',
+    # format='%(asctime)s.%(msecs)03d %(levelname)s [%(name)s] %(message)s',
     level=logging.DEBUG,
     datefmt="%d-%m-%Y %H:%M:%S",
     handlers=[
@@ -210,7 +217,7 @@ class GNCDaemon():
                 # Get default settings from dict and save
                 self._settings[dev._id] = dev.defaults()
                 self.saveSettings(dev._id)
-            dev.defs = Dict(self._settings[dev._id])
+            dev._defs = Dict(self._settings[dev._id])
         log.debug("Loaded settings")
         # print(self._settings)
 
@@ -242,7 +249,7 @@ class GNCDaemon():
             for dev in self._allDevices:
                 if dev._id == devId:
                     dev.settingsWillChange()
-                    dev.defs = self._settings[dev._id]
+                    dev._defs = self._settings[dev._id]
                     dev.settingsDidChange()
 
     @callback

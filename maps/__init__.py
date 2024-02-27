@@ -104,11 +104,13 @@ class MapLayer(YAMLWizard):
 		self._im = None
 		self._pixels = None
 		self._parent: Any = None
+		self._needsImSave = False
 
 	def to_dict(self):
 		return {k: v for k, v in asdict(self).items() if v is not None}
 
 	def object(self, name: str) -> MapObject | None:
+		# result = [obj if obj.name == name else None for obj in self.objects] # TODO: check if works
 		for i in self.objects:
 			if i.name == name: return i
 		return
@@ -149,19 +151,20 @@ class MapLayer(YAMLWizard):
 				os.mkdir(str(Path(pre_path)/Path(self.name)))
 			path = pre_path / Path(self.name) / Path(self.image)
 			self._im.save(path, format="TIFF", save_all=True)
+			self._needsImSave = False
 
 	def imageBytes(self) -> np.ndarray:
 		'''dtype=np.uint8'''
 		return np.array(self._im)
 
-	def setImageBytes(self, name: str, bytes):
+	def setImageBytes(self, bytes):
 		'''dtype=np.uint8'''
-		self.image = name
 		bytes = np.asarray(bytes, dtype=np.uint8)
 		self._im = Image.fromarray(bytes)
-		self.save()
-		if self._parent is not None:
-			self._parent.save()
+		self._needsImSave = True
+		# self.save()
+		# if self._parent is not None:
+		# 	self._parent.save()
 
 	def __getitem__(self, item: str):
 		return self.object(item)
@@ -196,7 +199,7 @@ class Map(YAMLWizard):
 		if self._started: return
 		self._observer = Observer()
 		self._fshandler = MapFileHandler(self)
-		if self.path and self.path != '': 
+		if self.path and self.path != '':
 			try:
 				print('start')
 				self._observer.schedule(self._fshandler, path=self.path, recursive=True)
@@ -252,7 +255,7 @@ class Map(YAMLWizard):
 		for key in p:
 			if p.name != Dict(): # renaming
 				folder = self.layers[layer].path()
-				if folder.exists() and str(folder) != '.': 
+				if folder.exists() and str(folder) != '.':
 					folder.rename(Path(self.path) / p.name)
 				else:
 					folder.mkdir()
@@ -287,6 +290,8 @@ class Map(YAMLWizard):
 				os.mkdir(str(Path(self.path)))
 			with Lock(self.path):
 				self.to_yaml_file(str(Path(self.path) / Path(DEFAULT_HEADER_NAME)))
+				for _, l in self.layers.items():
+					if l._needsImSave: l.save()
 			dispatcher.send(mapSavedEvent, sender = self)
 
 	def layer(self, name: str) -> MapLayer | None:

@@ -50,10 +50,12 @@ class Mapping():
         self._nav: Proxy
 
         self._device: Proxy | Gadget | None = None # Gadget()
-        self._scanner = None
+        self._scanner: Mapping2DScannerLike | None = None
         self._scannerFailed = False
 
         self._occGridLayerName = 'Occupancy Grid'
+        self._occGridLayerSizePx = 200
+        self._occGridLayer = None
         self._occGridShmName = ''
         self._occGridShape = [0,0]
         self._occGridShmCreated = False
@@ -119,9 +121,11 @@ class Mapping():
                 while not self._ctrl.headConnected():
                     time.sleep(0.5)
                 uri = str(self._ctrl.deviceUri())
-                self._device = Proxy(uri)
-                self._device._pyroBind()
+                dev = Proxy(uri)
+                dev._pyroBind()
+                self._device = dev.assembly()
                 log.debug('Head Device Unit connected')
+                if self._device: log.debug(f"Head Device Unit methods: {self._device._pyroMethods}")
             except Exception as e:
                 log.error(f"Couldn't connect to Head Device Unit. Reason: {e}")
                 self._failed = True
@@ -130,6 +134,8 @@ class Mapping():
         if self._map is None: return
         self._map.updateLayer('Guidance', Dict())
         self._map.updateLayer('Units', Dict())
+        self._occGridLayer = self._map.layer(self._occGridLayerName)
+        if self._occGridLayer: self._occGridLayer.image = "grid.tif"
 
     @property
     def failed(self): return self._failed
@@ -168,9 +174,7 @@ class Mapping():
             except Exception as e:
                 log.debug(f'Deleting Target object unsuccessful. Reason: {e}')
             return
-        # t = MapObject('Target')
         g = sh.Point(coords)
-        # self._map.moveObjectToLayer(t, 'Guidance')
         self._map.updateObject('Guidance', 'Target', Dict(geometry=g))
 
     @oneway
@@ -230,9 +234,11 @@ class Mapping():
             return
         im = layer.imageHandle()
         if not im:
-            log.critical('Attempting to build route with layer without image')
+            log.warning('Attempting to build route with layer without image')
             log.debug(f'Layer name: {self._occGridLayerName}, object: {layer}')
-            return
+        else:
+            grid = np.zeros((self._occGridLayerSizePx, self._occGridLayerSizePx), dtype=np.uint8)
+            layer.setImageBytes(grid)
 
         image_array = np.array(im)
         try:
@@ -259,7 +265,7 @@ class Mapping():
     def resetShm(self):
         self._occGridShmName = ''
         self._occGridShape = [0,0]
-        self.shmim = []
+        self.shmim = np.array([])
         if self.shm:
             self.shm.close()
             self.shm.unlink()
@@ -302,6 +308,7 @@ class Mapping():
             with Lock():
                 try:
                     log.debug(f"Writing to map file. \n\tPosition: {self._currentPosition['pos']}")
+                    if self._occGridLayer: self._occGridLayer.setImageBytes(self.shmim)
                     self._map.save()
                 except Exception as e:
                     log.exception("Saving map failed")
@@ -322,13 +329,16 @@ class Mapping():
 
         if self._scanner is not None:
             try:
+                if self._occGridLayer:
+                    self._scanner.setOccupancyGridSize(self._occGridLayer.size[0])
+                    self._scanner.setOccupancyGridOrigin((self._occGridLayer.origin[0], self._occGridLayer.origin[1]))
                 self._scanner.setup()
                 self._scanner.setHeadDevice(self._device)
                 self._scanner.start()
-                # TODO: Do the opposite give origin and size from layer to scanner
-                orig = self._scanner.occupancyGridOrigin()
-                size = self._scanner.occupancyGridSize()
-                if orig and size: self._map.updateLayer('Occupancy Grid', properties=Dict(origin = list(orig), size = list(size)))
+
+                # orig = self._scanner.occupancyGridOrigin()
+                # size = self._scanner.occupancyGridSize()
+                # if orig and size: self._map.updateLayer('Occupancy Grid', properties=Dict(origin = list(orig), size = list(size)))
             except:
                 log.exception("Scanner failed")
                 self._scannerFailed = True
@@ -344,7 +354,8 @@ class Mapping():
             if self._scanner and not self._scannerFailed:
                 try:
                     self._scanner.update()
-                    self.shmim = self._scanner.occupancyGrid() # FIXME: copy bytes
+                    im = self._scanner.occupancyGridMatrix()
+                    if im is not None: np.copyto(self.shmim, np.array(im))
                 except:
                     log.exception("Scanning failed")
                     self._scannerFailed = True
@@ -362,7 +373,7 @@ class Mapping():
         if scanner is None:
             log.warning(f"No Scanner unit provided")
             return
-        self._scanner = scanner
+        self._scanner = scanner  # type: ignore
         self._scanner._genId('Mapping')
         self._scanner._getLogger()
         log.info(f"Set scanner unit: {scanner.name} [{scanner.kind}]")
