@@ -299,9 +299,15 @@ class Controller():
             if self._shouldStop: break
 
             if self._manualUnit is not None:
-                self._manualUnit.update()
+                try:
+                    self._manualUnit.update()
+                except:
+                    log.exception("Manual unit update failed")
             if self._autoUnit is not None:
-                self._autoUnit.update()
+                try:
+                    self._autoUnit.update()
+                except:
+                    log.exception("Auto unit update failed")
 
             if self._manualUnit and self.js is not None and self.js.isConnected():
                 try:
