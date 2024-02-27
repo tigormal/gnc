@@ -320,8 +320,10 @@ class Controller():
                 except:
                     log.exception("Allocating joystick event failed.")
 
-            if self._mode == OperationMode.MANUAL and self._manualUnit: self._output = self._manualUnit.output
-            elif self._mode == OperationMode.AUTO and self._autoUnit: self._output = self._autoUnit.output
+            if self._mode == OperationMode.MANUAL and hasattr(self._manualUnit, 'output'):
+                self._output = self._manualUnit.output if (type(self._manualUnit.output) is list and len(self._manualUnit.output) == 6) else [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            elif self._mode == OperationMode.AUTO and hasattr(self._autoUnit, 'output'):
+                self._output = self._autoUnit.output if (type(self._autoUnit.output) is list and len(self._autoUnit.output) == 6) else [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
             try:
                 if asm and hasattr(asm, "setSpeedVector"): asm.setSpeedVector(self._output) #type: ignore # TODO: switch to protocol check
