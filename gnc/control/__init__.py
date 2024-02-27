@@ -236,27 +236,30 @@ class Controller():
     def connectJoystick(self):
         log.info("Connecting joystick...")
         jsNum = 0
-        # if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber() #type: ignore
+        if hasattr(self._manualUnit, 'jsNumber'): jsNum = self._manualUnit.jsNumber() #type: ignore
         startTime = datetime.now()
         try:
-            # log.debug("Connecting joystick...")
-            while not Gamepad.available(jsNum):
-                if self._shouldStop: return
-                if (datetime.now() - startTime).total_seconds() >= 5: break
-                if self.js is None:
-                    try:
-                        jsClass = Gamepad.Gamepad
-                        if hasattr(self._manualUnit, 'jsClass'): jsClass = self._manualUnit.jsClass() #type: ignore
-                        self.js = jsClass(joystickNumber=jsNum)
-                        log.info("Joystick connected")
-                        return True
-                    except Exception as e:
-                        log.error(f"Connecting joystick failed. Reason: {e}")
-                        time.sleep(0.5)
-                        # return False
-            return False
+            if self.js is None:
+                log.debug("Joystick is uninitialized")
+                while not Gamepad.available(jsNum):
+                    if self._shouldStop: return False
+                    if (datetime.now() - startTime).total_seconds() >= 5:
+                        log.debug("Timeout on joystick connection")
+                        return False
+                try:
+                    jsClass = Gamepad.Gamepad
+                    if hasattr(self._manualUnit, 'jsClass'): jsClass = self._manualUnit.jsClass() #type: ignore
+                    log.debug(f"{jsClass = }, {jsNum = }")
+                    self.js = jsClass(joystickNumber=jsNum)
+                    log.info("Joystick connected")
+                    return True
+                except Exception as e:
+                    log.error(f"Connecting joystick failed. Reason: {e}")
+                    time.sleep(0.5)
+                    return False
         except:
             log.exception("Joystick cannot be connected")
+            return False
 
     def main(self):
         log.info('Setting up...')
