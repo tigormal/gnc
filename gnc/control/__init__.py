@@ -38,6 +38,8 @@ log.addHandler(file_handler)
 # log.setLevel(logging.DEBUG)
 ## --- --- ---
 
+DEFAULT_OUTPUT = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
 class PIDController:
     def __init__(self, Kp, Ki, Kd, offset=0):
         '''
@@ -97,7 +99,7 @@ class Controller():
         self._device: Proxy | Gadget | None = None
         self._headConnected = False
         self._appr = False
-        self._output = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # velocity vector
+        self._output = DEFAULT_OUTPUT # velocity vector
         self._failed = False
         self.js = None
 
@@ -309,21 +311,26 @@ class Controller():
                 except:
                     log.exception("Auto unit update failed")
 
-            if self._manualUnit and self.js is not None and self.js.isConnected():
-                try:
+            try:
+                if self._manualUnit and self.js is not None and self.js.isConnected():
                     eventType, control, value = self.js.getNextEvent()
                     if not (control is None and value is None):
                         if eventType == 'BUTTON':
                             if hasattr(self._manualUnit, "onButton"): self._manualUnit.onButton(str(control), bool(value))
                         elif eventType == 'AXIS' and value is not None:
                             if hasattr(self._manualUnit, "onAxis"):self._manualUnit.onAxis(str(control), value)
-                except:
-                    log.exception("Allocating joystick event failed.")
+            except:
+                log.exception("Allocating joystick event failed.")
 
-            if self._mode == OperationMode.MANUAL and hasattr(self._manualUnit, 'output'):
-                self._output = self._manualUnit.output if (type(self._manualUnit.output) is list and len(self._manualUnit.output) == 6) else [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            elif self._mode == OperationMode.AUTO and hasattr(self._autoUnit, 'output'):
-                self._output = self._autoUnit.output if (type(self._autoUnit.output) is list and len(self._autoUnit.output) == 6) else [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+            unit = self._manualUnit if self._mode == OperationMode.MANUAL else self._autoUnit
+            try:
+                if hasattr(unit, 'output'):
+                    self._output = unit.output if (type(unit.output) is list and len(unit.output) == 6) else DEFAULT_OUTPUT
+            except:
+                log.exception("Obtaining units output failed.")
+                self._output = DEFAULT_OUTPUT
+
 
             try:
                 if asm and hasattr(asm, "setSpeedVector"): asm.setSpeedVector(self._output) #type: ignore # TODO: switch to protocol check
