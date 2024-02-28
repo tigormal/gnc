@@ -279,6 +279,7 @@ class Controller():
         if self._autoUnit is not None:
             log.info("Starting Auto unit")
             try:
+                if hasattr(self._autoUnit, 'setParent'): self._autoUnit.setParent(self)
                 self._autoUnit.setup()
                 self._autoUnit.start()
             except:
@@ -287,6 +288,7 @@ class Controller():
         if self._manualUnit is not None:
             log.info("Starting Manual unit")
             try:
+                if hasattr(self._manualUnit, 'setParent'): self._manualUnit.setParent(self)
                 self._manualUnit.setup()
                 self._manualUnit.start()
             except:
@@ -312,7 +314,7 @@ class Controller():
                     log.exception("Auto unit update failed")
 
             try:
-                if self._manualUnit and self.js is not None and self.js.isConnected():
+                if self._manualUnit and self.js and self.js.isConnected():
                     eventType, control, value = self.js.getNextEvent()
                     if not (control is None and value is None):
                         if eventType == 'BUTTON':
@@ -325,7 +327,7 @@ class Controller():
 
             unit = self._manualUnit if self._mode == OperationMode.MANUAL else self._autoUnit
             try:
-                if hasattr(unit, 'output'):
+                if unit and hasattr(unit, 'output'):
                     self._output = unit.output if (type(unit.output) is list and len(unit.output) == 6) else DEFAULT_OUTPUT
             except:
                 log.exception("Obtaining units output failed.")
